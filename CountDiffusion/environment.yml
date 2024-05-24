@@ -1,0 +1,31 @@
+name: CountDiffusion
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python == 3.9.0
+  - pytorch == 2.0.0
+  - torchvision
+  - pytorch-cuda=11.7
+  - pip:
+    - timm==0.6.12
+    - accelerate
+    - mmcv==1.7.0
+    - diffusers==0.27.2
+    - accelerate==0.15.0
+    - tensorboard
+    - transformers==4.36.1
+    - sentencepiece~=0.1.97
+    - ftfy~=6.1.1
+    - beautifulsoup4~=4.11.1
+    - opencv-python
+    - bs4
+    - einops
+    - megaconf
+    - xformers==0.0.19
+    - protobuf==3.20.2
+    - gradio==4.1.1
+    - yapf==0.40.1
+    - optimum
+    - peft
+    - came-pytorch

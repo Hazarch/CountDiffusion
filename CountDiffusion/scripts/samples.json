@@ -1,0 +1,22 @@
+[
+    [
+      "A single orange pumpkin and two apples resting on a wooden cart at the farmer's market",
+      {
+        "pumpkin": 1,
+        "apples": 2
+      }
+    ],
+    [
+      "A tent is between two lights",
+      {
+        "tent": 1,
+        "lights": 2
+      }
+    ],
+    [
+      "three apples on the table",
+      {
+        "apples": 3
+      }
+    ]
+]
