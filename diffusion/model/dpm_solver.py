@@ -1484,8 +1484,6 @@ class DPM_Solver:
         filted = F.avg_pool2d(mask.float().unsqueeze(0).unsqueeze(0), rectangle, stride=1)
         min_value = torch.min(filted)
         min_indices = torch.nonzero(filted == min_value)
-        print('hello')
-        print(min_indices)
         random_index = torch.randint(0, min_indices.size(0), size=(1,))
         x, y =  min_indices[random_index.item()][2:]
         (x1, y1, x2, y2) = (x, y, x+rectangle, y+rectangle)
