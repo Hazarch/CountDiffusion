@@ -426,6 +426,9 @@ class DPM_Solver:
         self.dynamic_thresholding_ratio = dynamic_thresholding_ratio
         self.thresholding_max_val = thresholding_max_val
 
+        self.t_prev_list = None
+        self.model_prev_list = None
+
     def dynamic_thresholding_fn(self, x0, t):
         """
         The dynamic thresholding method.
@@ -1251,33 +1254,97 @@ class DPM_Solver:
                     items_right = True if correct_dict is None else False
 
                 # Compute the remaining values by `order`-th order multistep DPM-Solver.
-                for step in tqdm(range(order, steps + 1)):
-                    t = timesteps[step]
-                    # We only use lower order for steps < 10
-                    # if lower_order_final and steps < 10:
-                    if lower_order_final:   # recommended by Shuchen Xue
-                        step_order = min(order, steps + 1 - step)
-                    else:
-                        step_order = order
-                    x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, t, step_order,
-                                                         solver_type=solver_type)
-                    if self.correcting_xt_fn is not None:
-                        x = self.correcting_xt_fn(x, t, step)
-                    if return_intermediate:
-                        intermediates.append(x)
-                    if store_intermediates is not None and step < args.max_revers_guidance and not items_right:
-                        x = store_intermediates[step] * ~modefy_mask + x * modefy_mask
-                    for i in range(order - 1):
-                        t_prev_list[i] = t_prev_list[i + 1]
-                        model_prev_list[i] = model_prev_list[i + 1]
-                    t_prev_list[-1] = t
-                    # We do not need to evaluate the final model value.
-                    if step < steps:
-                        if step < args.max_revers_guidance and store_intermediates is not None and not items_right:
+                if args.MCS and store_intermediates is not None and len(correct_dict) > 1:
+                    self.reset(t_prev_list, model_prev_list, keep=True)
+
+                    item_num = len(correct_dict)
+                    x_list = [x.detach().clone() for i in range(item_num)]
+                    save_model_prev_list = []
+                    mask_list = []
+
+                    for item_id, item in enumerate(correct_dict.keys()):
+                        x = x_list[item_id]
+                        model_prev_list, t_prev_list = self.reset()
+
+                        for step in tqdm(range(order, args.max_revers_guidance)):
+                            t = timesteps[step]
+                            # We only use lower order for steps < 10
+                            # if lower_order_final and steps < 10:
+                            if lower_order_final:   # recommended by Shuchen Xue
+                                step_order = min(order, steps + 1 - step)
+                            else:
+                                step_order = order
+                            x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, t, step_order,
+                                                                solver_type=solver_type)
+                            if self.correcting_xt_fn is not None:
+                                x = self.correcting_xt_fn(x, t, step)
+
+                            x = store_intermediates[step] * ~correct_dict[item]["s_mask_128"]+ x * correct_dict[item]["s_mask_128"]
+                            for i in range(order - 1):
+                                t_prev_list[i] = t_prev_list[i + 1]
+                                model_prev_list[i] = model_prev_list[i + 1]
+                            t_prev_list[-1] = t
+                            # We do not need to evaluate the final model value.
                             cnt_diff_x = self.CountDiffusion_fn(x, t, args, step, correct_dict, scale_range, modefy_mask)
+                            model_prev_list[-1] = cnt_diff_x
+                        
+                        x_list[item_id] = x
+                        mask_list.append(correct_dict[item]["s_mask_128"])
+                        save_model_prev_list.append(torch.stack(model_prev_list))
+                    
+                    model_prev_list = torch.mean(torch.stack(save_model_prev_list), dim=0)
+                    x = torch.mean(torch.stack(x_list), dim=0)
+
+                    for step in tqdm(range(args.max_revers_guidance, steps+1)):
+                        t = timesteps[step]
+                        # We only use lower order for steps < 10
+                        # if lower_order_final and steps < 10:
+                        if lower_order_final:   # recommended by Shuchen Xue
+                            step_order = min(order, steps + 1 - step)
                         else:
-                            cnt_diff_x = self.model_fn(x, t)
+                            step_order = order
+                        x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, t, step_order,
+                                                            solver_type=solver_type)
+                        if self.correcting_xt_fn is not None:
+                            x = self.correcting_xt_fn(x, t, step)
+
+                        for i in range(order - 1):
+                            t_prev_list[i] = t_prev_list[i + 1]
+                            model_prev_list[i] = model_prev_list[i + 1]
+                        t_prev_list[-1] = t
+                        # We do not need to evaluate the final model value.
+                        cnt_diff_x = self.model_fn(x, t)
                         model_prev_list[-1] = cnt_diff_x
+
+                
+                else:
+                    for step in tqdm(range(order, steps + 1)):
+                        t = timesteps[step]
+                        # We only use lower order for steps < 10
+                        # if lower_order_final and steps < 10:
+                        if lower_order_final:   # recommended by Shuchen Xue
+                            step_order = min(order, steps + 1 - step)
+                        else:
+                            step_order = order
+                        x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, t, step_order,
+                                                            solver_type=solver_type)
+                        if self.correcting_xt_fn is not None:
+                            x = self.correcting_xt_fn(x, t, step)
+                        if return_intermediate:
+                            intermediates.append(x)
+                        if store_intermediates is not None and step < args.max_revers_guidance and not items_right:
+                            x = store_intermediates[step] * ~modefy_mask + x * modefy_mask
+                        for i in range(order - 1):
+                            t_prev_list[i] = t_prev_list[i + 1]
+                            model_prev_list[i] = model_prev_list[i + 1]
+                        t_prev_list[-1] = t
+                        # We do not need to evaluate the final model value.
+                        if step < steps:
+                            if step < args.max_revers_guidance and store_intermediates is not None and not items_right:
+                                cnt_diff_x = self.CountDiffusion_fn(x, t, args, step, correct_dict, scale_range, modefy_mask)
+                            else:
+                                cnt_diff_x = self.model_fn(x, t)
+                            model_prev_list[-1] = cnt_diff_x
             elif method in ['singlestep', 'singlestep_fixed']:
                 if method == 'singlestep':
                     timesteps_outer, orders = self.get_orders_and_timesteps_for_singlestep_solver(steps=steps,
@@ -1315,6 +1382,13 @@ class DPM_Solver:
             return x, intermediates
         else:
             return x
+    
+    def reset(self, t_prev_list=None, model_prev_list=None, keep=False):
+        if keep:
+            self.t_prev_list = [i.detach().clone() for i in t_prev_list]
+            self.model_prev_list = [i.detach().clone() for i in model_prev_list]
+        else:
+            return [i.detach().clone() for i in self.model_prev_list], [i.detach().clone() for i in self.t_prev_list]
         
     def CountDiffusion_fn(self, x, t, args, step, correct_dict, scale_range, modefy_mask):
         with torch.enable_grad():
@@ -1458,10 +1532,6 @@ class DPM_Solver:
                 s_mask[x1:x2, y1:y2] = True
                 k_mask = k_mask & ~s_mask
                 f_mask = f_mask & ~s_mask
-
-                # mask_savle = (s_mask.cpu().numpy() * 255).astype(np.uint8)
-                # mask_color = cv2.cvtColor(mask_savle, cv2.COLOR_GRAY2BGR)
-                # cv2.imwrite(f'output/mid/add{i}.png', mask_color)
             
             s_mask_128 = F.interpolate(s_mask.unsqueeze(0).unsqueeze(0).float(), size=(128, 128), mode='nearest').squeeze() > 0
 
@@ -1476,7 +1546,7 @@ class DPM_Solver:
 
         if correct_dict  == {}:
             return None, None
-        modefy_mask = F.interpolate((~k_mask).float().unsqueeze(0).unsqueeze(0), size=(128, 128), mode='nearest') > 0
+        modefy_mask = F.interpolate((~k_mask).float().unsqueeze(0).unsqueeze(0), size=(128, 128), mode='nearest').squeeze() > 0
         
         return correct_dict, modefy_mask
     
