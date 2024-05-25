@@ -28,5 +28,5 @@ SAM: https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 Complete configs/sam_config.yaml and scripts/demo.py relative settings.
 ```bash
 cd CountDiffusion
-python scripts/demo.py --save_mid
+python scripts/demo.py --save_mid --MCS
 ```
