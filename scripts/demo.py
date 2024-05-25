@@ -36,25 +36,25 @@ def get_args():
         type=str, help="Download for loading text_encoder, "
                        "tokenizer and vae from https://huggingface.co/PixArt-alpha/pixart_sigma_sdxlvae_T5_diffusers"
     )
-    parser.add_argument('--model_path', default='/path/to/PixArt-Sigma-XL-2-1024-MS.pth', type=str)
+    parser.add_argument('--model_path', default='/data1/cache/pixart/PixArt-Sigma-XL-2-1024-MS.pth', type=str)
     parser.add_argument('--cfg_scale', default=4.5, type=float)
-    parser.add_argument('--seed', default=1, type=int)
+    parser.add_argument('--seed', default=3633, type=int)
     parser.add_argument('--step', default=-1, type=int)
     parser.add_argument('--save_path', default='outputs', type=str)
 
     # CountDiffusion control
     parser.add_argument('--ori', action='store_true', help="run pixart without CountDiffusion")
     parser.add_argument('--txt_file', default=None, type=str, help='When txt_file seted, prompts and token are invailable. instances in scripts/samples.json')
-    parser.add_argument('--prompts', default='Three apples and a cat on the grass', type=str)
+    parser.add_argument('--prompts', default='Three apples and two cat on the grass', type=str)
     parser.add_argument(
         '--token', 
         default={
             "apples": 3,
-            "cat": 1
+            "cat": 2
         }, 
         type=dict)
     parser.add_argument('--max_revers_guidance', default=15, type=int, help='max steps applying revers guidance')
-    parser.add_argument('--Multi_class_Strategy', action='store_true')
+    parser.add_argument('--MCS', action='store_true', help='Multi_Class_Strategy')
     parser.add_argument('--save_mid', action='store_true', help='save the intermediate result')
 
     parser.add_argument('--smooth_attentions', default=True, type=bool)
