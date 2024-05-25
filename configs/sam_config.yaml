@@ -2,6 +2,6 @@ sam:
   comfig_file: Grounded-Segment-Anything/GroundingDINO/groundingdino/config/GroundingDINO_SwinB.py
   grounded_checkpoint: /path/to/groundingdino_swinb_cogcoor.pth
   sam_checkpoint: /path/to/Grounded-Segment-Anything/sam_vit_h_4b8939.pth
-  box_threshold: 0.25
+  box_threshold: 0.3
   text_threshold: 0.2
   iou_threshold: 0.5
